@@ -1,0 +1,4 @@
+Created-By: Nathan et Thomas
+Manifest-Version: 1.0
+Main-Class: bin.graph.implementation.TestGraphImplementation
+Class-Path: bin/
