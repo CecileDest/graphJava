@@ -1,10 +1,14 @@
 package graph.implementation;
 
 import graph.*;
+import graph.edge.DirectedEdge;
+import graph.edge.Edge;
+import graph.edge.EdgeKind;
+import graph.edge.UndirectedEdge;
 
-import java.awt.*;
+import java.io.Serializable;
 
-public class IncidenceArrayGraph implements Graph {
+public class IncidenceArrayGraph implements Graph, Serializable {
 
     private int maxVertices;
     private Vertex[] vertices;
@@ -106,17 +110,15 @@ public class IncidenceArrayGraph implements Graph {
     @Override
     public void addEdge(Vertex vertex1, Vertex vertex2, EdgeKind edgeKind) {
         if (vertex1.getId() < this.maxVertices && vertex2.getId() < this.maxVertices) {
-            if (edgeKind == EdgeKind.directed) {
+            if (edgeKind == EdgeKind.DIRECTED) {
                 // Adds a directed edge to the edges array
-                DirectedEdge directedEdge = new DirectedEdge(Color.WHITE, 0, 0); // by default the source is the first vertex
-                directedEdge.setEnds(vertex1, vertex2);
+                DirectedEdge directedEdge = new DirectedEdge(vertex1, vertex2, 0); // by default the source is the first vertex
                 this.addEdge(directedEdge);
             }
-            if (edgeKind == EdgeKind.undirected) {
+            if (edgeKind == EdgeKind.UNDIRECTED) {
                 // Adds an undirected edge to the edges array
-                UndirectedEdge undirectedEdge = new UndirectedEdge(Color.WHITE, 0);
-                undirectedEdge.setEnds(vertex1, vertex2);
-               this.addEdge(undirectedEdge);
+                UndirectedEdge undirectedEdge = new UndirectedEdge(vertex1, vertex2);
+                this.addEdge(undirectedEdge);
             }
         } else {
             System.out.println("One of the passed vertices has an ID too high for the current graph.");
@@ -127,7 +129,10 @@ public class IncidenceArrayGraph implements Graph {
      * Adds the given edge to the edges array and to the incidence array.
      * @param edge the edge to add
      */
-    private void addEdge(Edge edge) {
+    private void addEdge(Edge edge) throws GraphOverflowException {
+
+        if (Utils.getFirstEmptyIndex(this.edges) == -1) throw new GraphOverflowException("Too many edges in the graph.");
+
         this.edges[edge.getId()] = edge;
         Vertex vertex1 = edge.getEnds()[0];
         Vertex vertex2 = edge.getEnds()[1];
@@ -174,30 +179,46 @@ public class IncidenceArrayGraph implements Graph {
 
 
     /**
+     * Checks if a given vertex1 is connected with vertex2.
      * @param vertex1 the first vertex
      * @param vertex2 the second vertex
-     * @return true if the two vertices are connected; false otherwier
+     * @return
      */
     @Override
-    public boolean isConnected(Vertex vertex1, Vertex vertex2) {
-        if (vertex1 == vertex2) return true;
+    public boolean isConnected(Vertex vertex1, Vertex vertex2) throws RuntimeException {
+        if (vertex1 == vertex2){
+            return true;
+        }
 
-        int verticesStates[] = new int[this.nbOfVertices()];
+        int[] vertex_states = new int[this.maxVertices];
+        for (int i = 0; i<this.maxVertices ; i++) {
+            vertex_states[i] = 0;
+        }
+        int current = vertex1.getId();
+        vertex_states[current] = 1;
 
-        verticesStates[vertex1.getId()] = 1;
-        Integer current = vertex1.getId();
-        int i;
-        while (verticesStates[vertex2.getId()] != 1 && current != null) {
-            i = 0;
-            while (i < this.maxVertices && this.incidenceArray[current][i] != null) {
-                Vertex otherEnd = this.otherEnd(this.incidenceArray[current][i], vertex1);
-                if (verticesStates[otherEnd.getId()] == 0) {
-                    verticesStates[otherEnd.getId()] = 1;
+        while (vertex_states[vertex2.getId()] != 1 && current != -1) {
+            int i = 0;
+            while (i < this.maxVertices && this.incidenceArray[current][i] != null){
+                Vertex otherEnd = this.otherEnd(this.incidenceArray[current][i], this.vertices[current]);
+                if (vertex_states[otherEnd.getId()] == 0) {
+                    vertex_states[otherEnd.getId()] = 1;
                 }
                 i++;
             }
-        }
+            vertex_states[current] = 2;
 
-        return false;
+            boolean found = false;
+            int j = 0;
+            current = -1;
+            while (j < vertex_states.length && !found) {
+                if (vertex_states[j] == 1){
+                    current = j;
+                    found = true;
+                }
+                j++;
+            }
+        }
+        return vertex_states[vertex2.getId()] == 1;
     }
 }
